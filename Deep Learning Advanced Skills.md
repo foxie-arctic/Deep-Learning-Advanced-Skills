@@ -52,6 +52,77 @@ options:
  --sum       sum the integers (default: find the max)
 ```
 
+Mutual exclusion:
+
+`ArgumentParser.add_mutually_exclusive_group(required=False)`
+
+Create a mutually exclusive group. argparse will make sure that only one of the arguments in the mutually exclusive group was present on the command line. For example:
+
+```
+parser = argparse.ArgumentParser(prog='PROG')
+
+group = parser.add_mutually_exclusive_group()
+
+group.add_argument('--foo', action='store_true')
+
+group.add_argument('--bar', action='store_false')
+
+parser.parse_args(['--foo'])
+#Namespace(bar=True, foo=True)
+
+parser.parse_args(['--bar'])
+#Namespace(bar=False, foo=False)
+
+parser.parse_args(['--foo', '--bar'])
+#usage: PROG [-h] [--foo | --bar]
+#PROG: error: argument --bar: not allowed with argument --foo
+```
+
+The `add_mutually_exclusive_group()` method also accepts a required argument, to indicate that at least one of the mutually exclusive arguments is required.
+
+Note that currently mutually exclusive argument groups do not support the title and description arguments of add_argument_group(). However, a mutually exclusive group can be added to an argument group that has a title and description. For example:
+
+```
+parser = argparse.ArgumentParser(prog='PROG')
+
+group = parser.add_argument_group('Group title', 'Group description')
+
+exclusive_group = group.add_mutually_exclusive_group(required=True)
+
+exclusive_group.add_argument('--foo', help='foo help')
+
+exclusive_group.add_argument('--bar', help='bar help')
+
+parser.print_help()
+#usage: PROG [-h] (--foo FOO | --bar BAR)
+#
+#options:
+#  -h, --help  show this help message and exit
+#
+#Group title:
+#  Group description
+#
+#  --foo FOO   foo help
+#  --bar BAR   bar help
+```
+
+Partial parsing:
+
+`ArgumentParser.parse_known_args(args=None, namespace=None)`
+
+Sometimes a script may only parse a few of the command-line arguments, passing the remaining arguments on to another script or program. In these cases, the `parse_known_args()` method can be useful. It works much like `parse_args()` except that it does not produce an error when extra arguments are present. Instead, it returns a two item tuple containing the populated namespace and the list of remaining argument strings. For example:
+
+```
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--foo', action='store_true')
+
+parser.add_argument('bar')
+
+parser.parse_known_args(['--foo', '--badger', 'BAR', 'spam'])
+#(Namespace(bar='BAR', foo=True), ['--badger', 'spam'])
+```
+
 Page: [argparse](https://docs.python.org/3/library/argparse.html)
 
 ### configargparse
@@ -617,6 +688,18 @@ When to use: Save more memory but lose speed.
 
 ### Built-in Methods
 
+* `any`: Return `True` if any element of the iterable is true. If the iterable is empty, return `False`. 
+
+Equivalent to:
+
+```
+def any(iterable):
+    for element in iterable:
+        if element:
+            return True
+    return False
+```
+
 * `getattr`: retrieve the value of an attribute from an object using its name as a string
 
 In Python, the `getattr()` function is a built-in function that allows you to retrieve the value of an attribute from an object using its name as a string. It's particularly useful when you want to access an attribute dynamically, meaning that you only know the attribute's name as a string at runtime. `getattr()` is often used for introspection, dynamic attribute access, and to handle cases where the attribute might not exist.
@@ -660,6 +743,14 @@ print(location)  # Output: Unknown
 In this example, `getattr()` is used to dynamically access the `name` and `age` attributes of the `person` object. It's also used to access a non-existent attribute, `location`, with a default value of `"Unknown"`.
 
 The `getattr()` function is particularly handy when you're working with objects whose attribute names are determined at runtime or when you're designing code that involves introspection, metaprogramming, or dynamic configuration.
+
+* `hasattr`: The arguments are an object and a string. The result is `True` if the string is the name of one of the object’s attributes, `False` if not. (This is implemented by calling `getattr(object, name)` and seeing whether it raises an `AttributeError` or not.)
+
+The general syntax of the `hasattr()` function is as follows:
+
+```python
+hasattr(object, attribute_name[, default])
+```
 
 * `id`: returns the unique identity (memory address) of an object
 
@@ -883,17 +974,73 @@ An example of using `@contextmanager` to disable `class_embedding` in `unet` wit
     		noise_pred_pretrain = unet(latent_model_input, tt, encoder_hidden_states=text_embeddings,cross_attention_kwargs={"scale": 0.0}).sample
 ```
 
+* `contextlib.redirect_stdout(new_target)`
 
+Context manager for temporarily redirecting `sys.stdout` to another file or file-like object.
+
+This tool adds flexibility to existing functions or classes whose output is hardwired to stdout.
+
+For example, the output of `help()` normally is sent to `sys.stdout`. You can capture that output in a string by redirecting the output to an `io.StringIO` object. The replacement stream is returned from the `__enter__` method and so is available as the target of the with statement.
 
 
 
 Page: [contextlib](https://docs.python.org/3/library/contextlib.html)
 
-### Decorators
+### Decorators(Built-in)
 
 * `@dataclass`: Similar to `struct` in `C++`
 
-Page: [`@dataclass` on Zhihu](https://zhuanlan.zhihu.com/p/419778289)
+Page: [`@dataclass`](https://docs.python.org/3/library/dataclasses.html?highlight=dataclass#dataclasses.dataclass)
+
+* `@property`: Turns the decorated method into a “getter” for a read-only attribute with the same name. It defines a
+
+Page: [`@property`](https://docs.python.org/3/library/functions.html?highlight=property#property)
+
+* `@getter`: A property object has getter, setter, and deleter methods usable as decorators that create a copy of the property with the corresponding accessor function set to the decorated function. 
+
+* `@setter`: A property object has getter, setter, and deleter methods usable as decorators that create a copy of the property with the corresponding accessor function set to the decorated function. 
+
+* `@deleter`: A property object has getter, setter, and deleter methods usable as decorators that create a copy of the property with the corresponding accessor function set to the decorated function. 
+
+### Decorators(Self-defined)
+
+A function definition may be wrapped by one or more decorator expressions. Decorator expressions are evaluated when the function is defined, in the scope that contains the function definition. The result must be a callable, which is invoked with the function object as the only argument. The returned value is bound to the function name instead of the function object. Multiple decorators are applied in nested fashion. For example, the following code:
+
+```
+@f1(arg)
+@f2
+def func(): pass
+```
+
+which is roughly equivalent to:
+
+```
+def func(): pass
+func = f1(arg)(f2(func))
+```
+
+except that the original function is not temporarily bound to the name func.
+
+Classes can also be decorated: just like when decorating functions,
+
+```
+@f1(arg)
+@f2
+class Foo: pass
+```
+
+is roughly equivalent to
+
+```
+class Foo: pass
+Foo = f1(arg)(f2(Foo))
+```
+
+Page: [decorators of functions](https://docs.python.org/3/reference/compound_stmts.html#function)
+
+Page: [decorators of classes](https://docs.python.org/3/reference/compound_stmts.html#class)
+
+
 
 ### Dunder(double underscore) Methods
 
@@ -958,6 +1105,8 @@ Note that if the module is executed directly (i.e., it's the main script), `__na
 
 The `.__name__` attribute is particularly useful when writing code that can be executed both as a standalone script and as a module to be imported into other scripts. It allows you to check whether the code is being executed directly or imported, and this can help you define specific behavior in each case.
 
+* `.__dir__`
+
 ### Generator
 
 Generators in Python are a special type of iterable, and they are a powerful feature for working with sequences of data. Generators allow you to create iterable sequences on-the-fly, producing values one at a time rather than loading the entire sequence into memory. They are defined using functions and the `yield` keyword.
@@ -983,6 +1132,11 @@ Generators use lazy evaluation, which means they produce values one at a time as
 3. Inside the loop, it tries to yield the next element from the iterator using `yield next(iterator)`.
 
 4. If the iterator is exhausted and raises a `StopIteration` exception (which is a common way iterators signal the end), it catches the exception and resets the iterator by creating a new one with `iterator = iter(iterable)`. This effectively restarts the iteration from the beginning of the input iterable, allowing it to cycle through the elements again.
+
+### importlib
+
+### logging
+
 
 
 ## PyTorch
@@ -1144,6 +1298,20 @@ Pages:
 
 ### Network
 
+#### Adding `torch.Tensor` to model's buffer(should not be considered as parameters)
+
+Buffer is a kind of Tensor that shouldn't be considered as a module's parameter, but it is still a part of the module's state. For example, BatchNorm’s `running_mean` is not a parameter, but is part of the module’s state. Buffers, by default, are persistent and will be saved alongside parameters. This behavior can be changed by setting `persistent` to `False`. The only difference between a persistent buffer and a non-persistent buffer is that the latter will not be a part of this module’s `state_dict`.
+
+Buffers can be accessed as attributes using given names.
+
+To add a tensor to the module's buffer, we use `register_buffer` method of `nn.Module`. 
+
+```
+register_buffer(name, tensor, persistent=True)
+```
+
+`name` represents the name of the buffer. The buffer can be accessed from this module using the given name. `tensor` represents buffer to be registered. If `None`, then operations that run on buffers, such as `cuda`, are ignored. If `None`, the buffer is not included in the module’s `state_dict`. `persistent` represents whether the buffer is part of this module’s state_dict.
+
 #### Adding `torch.Tensor` to model's parameters
 
 `Parameter` is a kind of Tensor that is to be considered a module parameter.
@@ -1158,7 +1326,7 @@ So basically, there are 2 steps to add a `Tensor` to model's parameters.
 
 1. Wrap the `Tensor` up with `torch.nn.parameter.Parameter` and determine whether it needs to be updated during training.
 
-2. Assign the new `Parameter` as one of the attributes of a `Module`, then it will be automatically added to the `module`'s parameters list.  
+2. Assign the new `Parameter` as one of the attributes of a `Module`, then it will be automatically added to the `module`'s parameters list.
 
 Or, if you don't want the `Parameter` to be the attribute of a `Module`, you may directly pass it to the `optimizer`
 
@@ -1316,6 +1484,157 @@ In summary, this function sets various random number generator seeds to maintain
 
 ## PyTorch Lightning
 
+### Callbacks
+
+An overall Lightning system should have:
+
+1. Trainer for all engineering
+2. LightningModule for all research code.
+3. Callbacks for non-essential code.
+
+A callback is a self-contained program that can be reused across projects.
+
+Lightning has a callback system to execute them when needed. Callbacks should capture NON-ESSENTIAL logic that is NOT required for your lightning module to run.
+
+
+#### Callback hooks of PyTorch Lightning
+
+```
+->fit()
+	->prepare_data() # Load the datasets.
+	
+	->setup() # Transforms, split dataset. 
+	
+	# Build dataloaders. 
+	
+	->configure_optimizers() # Initialize optimizers.
+	
+	->on_pretrain_routine_start()
+	->pretrain_routine() # Set the number of epochs.
+	->on_pretrain_routine_end()
+	
+	->on_train_start()
+		# for epoch in range(num_epochs)
+		->on_train_epoch_start() # Before an epoch.
+			->train_dataloader() # Prepare the batch for this loop (for batch in dataloader).
+				->on_train_batch_start()
+					->training_step() # Split the batch. Calculate the loss.
+					->TrainResult.log() # Log the train result.
+					->backward() # Back propagation (loss.backward()).
+					->on_after_backward() # After back propagation, but before updating.
+					->optimizer_step() # Update parameters (optimizer.step()).
+					->on_before_zero_grad() # After parameter updating, but before clearing the gradients.
+					->optimizer_zero_grad() # Clear the gradient (optimizer.zero_grad()).
+				->on_train_batch_end()
+				
+				# Switch model to evaluation mode (model.eval()). Enclose validation in with torch.no_grad().
+				
+				->on_validation_epoch_start()
+					->val_dataloader()
+						# for val_batch in val_dataloader()
+						->on_validation_batch_start()
+							->validation_step() # Split the batch. Calculate the metrics.
+							->EvalResult.log(log_step=True)
+						->on_validation_batch_end()
+					->validation_epoch_end(val_outs) # Between batch loop and epoch loop.
+					->EvalResult.log(on_epoch=True)
+					->EvalResult.log(checkpoint_on=X, early_stop_on=X)
+				->on_validation_epoch_end() 
+		->on_train_epoch_end() # After an epoch.
+		# Switch model to train mode (model.train()). Leave with torch.no_grad() region.
+	->on_train_end()
+	
+	->teardown()
+	->same hooks for .test()
+	
+```
+
+These callbacks belong to:
+
+```
+class LightningModule(pl.Callback):
+	def configure_optimizers()
+	def training_step()
+	
+	### Optional ###
+	def validation_step()
+	def trainining_epoch_end(outputs)
+	def validation_epoch_end(val_outs)
+	def backward()
+	def on_after_backward()
+	def optimzer_zero_grad()
+	###
+	
+class LightningDataModule(pl.Callback):
+	def prepare_data()
+	def setup()
+	def train_dataloader()
+	def val_dataloader()
+	def test_dataloader()
+	
+class MyCallback(pl.Callback):
+	def on_pretrain_routine_start()
+	def on_pretrain_routine_end()
+	def on_train_start()
+	def on_train_epoch_start()
+	def on_train_batch_start()
+	def optimizer_step()
+	def on_before_zero_grad()
+	def on_train_batch_end()
+	def on_validation_epoch_start()
+	def on_validation_batch_start()
+	def on_validation_batch_end()
+	def on_validation_epoch_end()
+	def on_train_end()
+	def teardown()
+```
+
+#### Built-in callbacks
+
+* `ModelCheckpoint`: 
+
+A callback function for fine-grained control over checkpointing behavior.
+
+Save the model periodically by monitoring a quantity. Every metric logged with `log()` or `log_dict()` in `LightningModule` is a candidate for the monitor key.
+
+After training finishes, use `best_model_path` to retrieve the path to the best checkpoint file and `best_model_score` to retrieve its score.
+
+To save checkpoints based on a (when/which/what/where) condition (for example when the `validation_loss` is lower) modify the `ModelCheckpoint` properties.
+
+When: When using iterative training which doesn’t have an epoch, you can checkpoint at every N training steps by specifying `every_n_train_steps=N`. You can also control the interval of epochs between checkpoints using `every_n_epochs`, to avoid slowdowns. You can checkpoint at a regular time interval using the `train_time_interval` argument independent of the steps or epochs. In case you are monitoring a training metric, we’d suggest using `save_on_train_epoch_end=True` to ensure the required metric is being accumulated correctly for creating a checkpoint.
+
+Which: You can save the last checkpoint when training ends using `save_last` argument. You can save top-K and last-K checkpoints by configuring the `monitor` and `save_top_k` argument. You can customize the checkpointing behavior to monitor any quantity of your training or validation steps. 
+
+What: By default, the `ModelCheckpoint` callback saves model weights, optimizer states, etc., but in case you have limited disk space or just need the model weights to be saved you can specify `save_weights_only=True`.
+
+Where: It gives you the ability to specify the `dirpath` and `filename` for your checkpoints. Filename can also be dynamic so you can inject the metrics that are being logged using `log()`.
+
+Pages:
+
+[Callback: `ModelCheckpoint`](https://lightning.ai/docs/pytorch/1.7.4/api/pytorch_lightning.callbacks.ModelCheckpoint.html#pytorch_lightning.callbacks.ModelCheckpoint)
+
+[Checkpoint: `ModelCheckpoint`](https://lightning.ai/docs/pytorch/1.7.4/common/checkpointing_intermediate.html)
+
+* `LearningRateMonitor`:
+
+Automatically monitor and logs learning rate for learning rate schedulers during training.
+
+[Callback: `LearningRateMonitor`](https://lightning.ai/docs/pytorch/1.7.4/api/pytorch_lightning.callbacks.LearningRateMonitor.html#pytorch_lightning.callbacks.LearningRateMonitor)
+
+#### Self-defined callbacks
+
+The `Callback` class is the base for all the callbacks in Lightning just like the `LightningModule` is the base for all models. It defines a public interface that each callback implementation must follow, the key ones are:
+
+Properties:
+
+* state_key
+
+Hooks: All kinds of hooks.
+
+### Trainer
+
+
+
 ## Tensorboard
 
 Pages: 
@@ -1324,4 +1643,481 @@ Pages:
 
 [To use Tensorboard with PyTorch](https://pytorch.org/docs/1.12/tensorboard.html?highlight=tensorboard#module-torch.utils.tensorboard)
 
+## threestudio
+
+### `Configurable`
+
+`Configurable` will convert a configuration `cfg` to an OmegaConf version `self.cfg`. It also contains a nested dataclass `self.Config`.
+
+Defined in `threestudio/utils/base.py`.
+
+`self.cfg` is the only attribute of this class besides the nested dataclass `self.Config`. It converts the configuration in this way: `self.cfg = OmegaConf.structured(self.Config(**cfg))`.
+
+### `Updateable`
+
+`Updateable` will update itself and all its `Updateable` attributes at the beginning of each iteration.
+
+It is the superclass of `BaseSystem`, `BaseModule`, `BaseObject`.
+
+Defined in `threestudio/utils/base.py`.
+
+Member functions of this class:
+
+|Member Function|Effects|
+|--|--|
+|`do_update_step`|Recursively do update to all `Updateable` attributes of an object by calling `do_update_step` on all of its `Updateable` attributes and then update itself using `update_step`.|
+|`update_step`|Called by `do_update_step`. Override to implement your own logic. if `on_load_weights` is True, you should be careful doing things related to model evaluations, as the models and tensors are not guarenteed to be on the same device.|
+|`do_update_step_end`|Similar to `do_update_step`, without parameter `on_load_weights`.|
+|`update_step_end`|Called by `do_update_step_end`. Override to implement your own logic.|
+
+If you want to define a subclass derived from this class, you need to define `update_step` and `update_step_end`.
+
+Ordinary functions closely related with this class:
+
+|Function|Effects|
+|--|--|
+|`update_if_possible`|If the `module` in the parameter is `Updateable`, call its `do_update_step`.|
+|`update_end_if_possible`|If the `module` in the parameter is `Updateable`, call its `do_update_step_end`.|
+
+### `SaveMixin`
+
+Superclass of `BaseSystem`. `SaveMixin` is a class where various save methods are defined.
+
+Defined in `threestudio/utils/saving.py`
+
+It has 2 attributes.
+
+|Attribute|Meaning|
+|--|--|
+|`_save_dir`|Save directory.|
+|`_wandb_logger`|Logger of wandb.|
+
+It provides some default parameters.
+
+```
+    DEFAULT_RGB_KWARGS = {"data_format": "HWC", "data_range": (0, 1)}
+    DEFAULT_UV_KWARGS = {
+        "data_format": "HWC",
+        "data_range": (0, 1),
+        "cmap": "checkerboard",
+    }
+    DEFAULT_GRAYSCALE_KWARGS = {"data_range": None, "cmap": "jet"}
+    DEFAULT_GRID_KWARGS = {"align": "max"}
+```
+
+It provides the following methods:
+
+|Function|Effects|
+|--|--|
+|`set_save_dir`|Set the save directory.|
+|`get_save_dir`|Return the save directory. If not defined it will raise an error.|
+|`convert_data`|If `None`, return `None`. Else, return `np.ndarray`(detached, on cpu) or recursively convert the elements inside a list or dict using the base cases above.|
+|`get_save_path`|Return the save path `os.path.join(self.get_save_dir(), filename)` and create an empty directory if the path does not exist.|
+|`create_loggers`|Create wandb loggers.|
+|`get_loggers`|Return the loggers in list. If `None`, return an empty list.|
+|`save_rgb_image`|Save the rgb image according to the parameters. Using `get_rgb_image_` and `_save_rgb_image`.|
+|`save_uv_image`|Save the uv image according to the parameters. Using `get_uv_image_`.|
+|`save_grayscale_image`|Save the grayscale image according to the parameters. Using `get_grayscale_image_` and `_save_grayscale_image`.|
+|`save_image_grid`|Combines a grid of images and saves it. Optionally, it can overlay text on the images. Using `get_image_grid_`.|
+|`save_image`|Saves a single image.|
+|`save_cubemap`|Save a cubemap.|
+|`save_data`|Saves numerical data (numpy array or dictionary) to a file, either in NPZ or NPY format.|
+|`save_state_dict`|Save state dict.|
+|`save_img_sequence`|Saves a sequence of images as a video (GIF or MP4).|
+|`save_mesh`|Saves a 3D mesh using the trimesh library.|
+|`save_obj`|Saves a 3D mesh in Wavefront OBJ format along with optional material properties. Using `_save_obj` and `_save_mtl`.|
+|`save_file`|Copies a file from a source path to the specified save location.|
+|`save_json`|Saves a JSON file with the provided payload.|
+
+### `BaseObject`
+
+Subclass of `Updateable`. Superclass of `guidance` and `prompt_processor` inside a method (a subclass of `BaseSystem`).
+
+Defined in `threestudio/utils/base.py`.
+
+It has a nested dataclass `Config`.
+
+`cfg: Config` inside the definition of the class to enable static type checking.
+
+It has 2 attributes and 1 member function.
+
+|Attribute|Meaning|
+|--|--|
+|`cfg`|It converts the configuration in this way: `self.cfg = OmegaConf.structured(self.Config(**cfg))`.|
+|`device`|It gets the device using `get_device`.|
+
+|Member Function|Effects|
+|--|--|
+|`configure`|Called by `__init__` to initialize additional configurations.|
+
+You'll need to write `configure`.
+
+### `BaseModule`
+
+Subclass of `nn.Module` and `Updateable`. Superclass of `geometry`, `material`, `background`, `renderer`. The reason of setting `BaseObject` and `BaseModule` seperately is to prevent the `BaseObject` from being treated as model parameters and better control their behavior in multi-GPU settings.
+
+Defined in `threestudio/utils/base.py`.
+
+It has a nested dataclass `Config`, which contains an attribute called `weights`.
+
+`cfg: Config` inside the definition of the class to enable static type checking.
+
+It has the following attributes:
+
+|Attribute|Meaning|
+|--|--|
+|`cfg`|It converts the configuration in this way: `self.cfg = OmegaConf.structured(self.Config(**cfg))`. If `self.cfg.weights` is not `None`, then it will follow the format of `path/to/weights:module_name`. In `self.__init__`, `self.cfg.weights` will be firstly split into `weights_path` and `module_name` by ":". Then `load_module_weights` will return the `state_dict`, `epoch` and `global_step` using `weights_path` and `module_name`. Then `self.load_state_dict` will be called to load state dict. `self.do_update_step` will be called to restore states with `on_load_weights = True`.|
+|`device`|It gets the device using `get_device`.|
+|`_dummy`|A dummy tensor to indicate model state. Initialize using `self.register_buffer` method as `torch.zeros(0).float()`, `persistent = False` means that it will not be a part of model's `state_dict`.|
+
+It has the following member function:
+
+|Member Function|Effects|
+|--|--|
+|`configure`|Called by `__init__` to initialize additional configurations.|
+
+You'll need to write `configure`.
+
+### `BaseSystem`
+
+Subclass of `pl.LightningModule`, `Updateable`, `SaverMixin`. Superclass of `BaseLift3DSystem`.
+
+Defined in `threestudio/systems/base.py`.
+
+It has a nested dataclass `Config`, which contains following attributes:
+
+```
+    @dataclass
+    class Config:
+        loggers: dict = field(default_factory=dict)
+        loss: dict = field(default_factory=dict)
+        optimizer: dict = field(default_factory=dict)
+        scheduler: Optional[dict] = None
+        weights: Optional[str] = None
+        weights_ignore_modules: Optional[List[str]] = None
+        cleanup_after_validation_step: bool = False
+        cleanup_after_test_step: bool = False
+```
+
+`BaseSystem` has some attributes.
+
+|Attribute|Meaning|
+|--|--|
+|`cfg`|It converts the configuration in this way: `self.cfg = OmegaConf.structured(self.Config(**cfg))`. If `self.cfg.weights` is not `None`, then it will call `self.load_weight` to load the weights. If "loggers" in `cfg`, call `self.create_loggers` to create loggers.|
+|`_save_dir`|Save directory.|
+|`_resumed`|Initialized with `resumed`.|
+|`_resumed_eval`||
+|`_resumed_eval_status`||
+
+It has the following member functions:
+
+|Member Function|Effects|
+|--|--|
+|`load_weights`|`load_module_weights` will return the `state_dict`, `epoch` and `global_step` using `weights`, `ignore_modules` and `map_location = "cpu"`. Then `self.load_state_dict` will be called to load state dict with `strict = False`. `self.do_update_step` will be called to restore states with `on_load_weights = True`.|
+|`set_resume_status`|Restore correct epoch and global step in eval. Set `self._resumed_eval = True`, `self._resume_eval_status["current_epoch"] = current_epoch`, `self._resume_eval_status["global_step"] = global_step`.|
+|`resume`|Return `self._resumed`, check whether from resumed checkpoint. Decorated by `@property`.|
+|`true_global_step`|If `self._resumed_eval`, return `self._resumed_eval_status["global_step"]`. Else, return `self.global_step`. Decorated by `@property`.|
+|`true_current_epoch`|If `self._resumed_eval`, return `self._resumed_eval_status["current_epoch"]`. Else, return `self.current_epoch`. Decorated by `@property`.|
+|`configure`|Called by `__init__` to initialize additional configurations.|
+|`post_configure`|Called by `__init__` to initialize additional configurations after weights are loaded.|
+|`C`|Return `C(value, self.true_current_epoch, self.true_global_step)`(`C` from `    threestudio/utils/misc.py`). Create time dependent linear interpolation for certain values.|
+|`configure_optimizers`|Return a dict containing `"optimizer": optim` and an additional scheduler configuration `"lr_scheduler": parse_scheduler(self.cfg.scheduler, optim)` if `self.cfg.scheduler is not None`.|
+|`training_step`|Define train step. Must be implemented. Derived from `pl.LightningModule`.|
+|`validation_step`|Define validation step. Must be implemented. Derived from `pl.LightningModule`.|
+|`on_train_batch_end`||
+|`on_validation_batch_end`||
+|`on_validation_epoch_end`|Must be implemented.|
+|`test_step`|Must be implemented.|
+|`on_test_batch_end`||
+|`on_test_epoch_end`||
+|`predict_step`|Must be implemented.|
+|`on_predict_batch_end`||
+|`on_predict_epoch_end`||
+|`preprocess_data`||
+|`on_train_batch_start`||
+|`on_validation_batch_start`||
+|`on_test_batch_start`||
+|`on_predict_batch_start`||
+|`update_step`||
+|`on_before_optimizer_step`|some gradient-related debugging goes here, example:`from lightning.pytorch.utilities import grad_norm norms = grad_norm(self.geometry, norm_type=2) print(norms)`|
+
+### `BaseLift3DSystem`
+
+Subclass of `BaseSystem`. 
+
+Defined in `threestudio/systems/base.py`.
+
+It has a nested dataclass `Config` derived from `BaseSystem.Config`, which contains following additional attributes:
+
+```
+    @dataclass
+    class Config(BaseSystem.Config):
+        geometry_type: str = ""
+        geometry: dict = field(default_factory=dict)
+        geometry_convert_from: Optional[str] = None
+        geometry_convert_inherit_texture: bool = False
+        # used to override configurations of the previous geometry being converted from,
+        # for example isosurface_threshold
+        geometry_convert_override: dict = field(default_factory=dict)
+
+        material_type: str = ""
+        material: dict = field(default_factory=dict)
+
+        background_type: str = ""
+        background: dict = field(default_factory=dict)
+
+        renderer_type: str = ""
+        renderer: dict = field(default_factory=dict)
+
+        guidance_type: str = ""
+        guidance: dict = field(default_factory=dict)
+
+        prompt_processor_type: str = ""
+        prompt_processor: dict = field(default_factory=dict)
+
+        # geometry export configurations, no need to specify in training
+        exporter_type: str = "mesh-exporter"
+        exporter: dict = field(default_factory=dict)
+```
+
+It has the following member functions:
+
+|Member Function|Effects|
+|--|--|
+|`configure`||
+|`on_fit_start`||
+|`on_test_end`||
+|`on_predict_start`||
+|`predict_step`||
+|`on_predict_epoch_end`||
+|`on_predict_end`||
+|`guidance_evaluation_save`||
+
+### `launch.py`
+
+It takes the following arguments:
+
+|Argument|Effect|
+|--|--|
+|`--config`|Path to config file|
+|`--gpu`|GPU(s) to be used. 0 means use the 1st available GPU. 1,2 means use the 2nd and 3rd available GPU. If `CUDA_VISIBLE_DEVICES` is set before calling `launch.py`, this argument is ignored and all available GPUs are always used.|
+|`--train|--validate|--test|--export`|Set run mode.|
+|`--gradio`|If true, run in gradio mode. This means that `main` function will run under `with contextlib.redirect_stdout(sys.stderr):`.|
+|`--verbose`|If true, set logging level to DEBUG.|
+|`--typecheck`|Whether to enable dynamic type checking.|
+
+The argument will be parse into `(args, extra)` using `parser.parse_known_args()`. The tuple will be passed to the `main` function.
+
+Main function will first configure GPU settings as follows:
+
+```
+    # set CUDA_VISIBLE_DEVICES if needed, then import pytorch-lightning
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    env_gpus_str = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    env_gpus = list(env_gpus_str.split(",")) if env_gpus_str else []
+    selected_gpus = [0]
+
+    # Always rely on CUDA_VISIBLE_DEVICES if specific GPU ID(s) are specified.
+    # As far as Pytorch Lightning is concerned, we always use all available GPUs
+    # (possibly filtered by CUDA_VISIBLE_DEVICES).
+    devices = -1
+    if len(env_gpus) > 0:
+        # CUDA_VISIBLE_DEVICES was set already, e.g. within SLURM srun or higher-level script.
+        n_gpus = len(env_gpus)
+    else:
+        selected_gpus = list(args.gpu.split(","))
+        n_gpus = len(selected_gpus)
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+```
+
+Then it will conduct the basic import settings:
+
+```
+    import pytorch_lightning as pl
+    import torch
+    from pytorch_lightning import Trainer
+    from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+    from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
+    from pytorch_lightning.utilities.rank_zero import rank_zero_only
+
+    if args.typecheck:
+        from jaxtyping import install_import_hook
+
+        install_import_hook("threestudio", "typeguard.typechecked")
+
+    import threestudio
+    from threestudio.systems.base import BaseSystem
+    from threestudio.utils.callbacks import (
+        CodeSnapshotCallback,
+        ConfigSnapshotCallback,
+        CustomProgressBar,
+        ProgressCallback,
+    )
+    from threestudio.utils.config import ExperimentConfig, load_config
+    from threestudio.utils.misc import get_rank
+    from threestudio.utils.typing import Optional
+```
+
+Logger settings:
+
+```
+    logger = logging.getLogger("pytorch_lightning")
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+
+    for handler in logger.handlers:
+        if handler.stream == sys.stderr:  # type: ignore
+            if not args.gradio:
+                handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+                handler.addFilter(ColoredFilter())
+            else:
+                handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+```
+
+Load extension modules:
+
+```
+	load_custom_modules()
+```
+
+Parse YAML config to OmegaConf:
+
+```
+    cfg: ExperimentConfig
+    cfg = load_config(args.config, cli_args=extras, n_gpus=n_gpus)
+```
+
+Seed settings:
+
+```
+	pl.seed_everything(cfg.seed + get_rank(), workers=True)
+```
+
+Load data module:
+
+```
+	dm = threestudio.find(cfg.data_type)(cfg.data)
+```
+
+Load base system and set its save directory:
+
+```
+    system: BaseSystem = threestudio.find(cfg.system_type)(
+        cfg.system, resumed=cfg.resume is not None
+    )
+    
+    system.set_save_dir(os.path.join(cfg.trial_dir, "save"))
+```
+
+Set logging level under gradio mode:
+
+```
+    if args.gradio:
+        fh = logging.FileHandler(os.path.join(cfg.trial_dir, "logs"))
+        fh.setLevel(logging.INFO)
+        if args.verbose:
+            fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+        logger.addHandler(fh)
+```
+
+Define callbacks for model checkpoint saving, learning rate logging, code snapshot, config snapshot and progress displaying:
+
+```
+
+    callbacks = []
+    if args.train:
+        callbacks += [
+            ModelCheckpoint(
+                dirpath=os.path.join(cfg.trial_dir, "ckpts"), **cfg.checkpoint
+            ),
+            LearningRateMonitor(logging_interval="step"),
+            CodeSnapshotCallback(
+                os.path.join(cfg.trial_dir, "code"), use_version=False
+            ),
+            ConfigSnapshotCallback(
+                args.config,
+                cfg,
+                os.path.join(cfg.trial_dir, "configs"),
+                use_version=False,
+            ),
+        ]
+        if args.gradio:
+            callbacks += [
+                ProgressCallback(save_path=os.path.join(cfg.trial_dir, "progress"))
+            ]
+        else:
+            callbacks += [CustomProgressBar(refresh_rate=1)]        
+        
+```
+
+TensorBoard and CSV logger settings:
+
+```
+    def write_to_text(file, lines):
+        with open(file, "w") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+    loggers = []
+    if args.train:
+        # make tensorboard logging dir to suppress warning
+        rank_zero_only(
+            lambda: os.makedirs(os.path.join(cfg.trial_dir, "tb_logs"), exist_ok=True)
+        )()
+        loggers += [
+            TensorBoardLogger(cfg.trial_dir, name="tb_logs"),
+            CSVLogger(cfg.trial_dir, name="csv_logs"),
+        ] + system.get_loggers()
+        rank_zero_only(
+            lambda: write_to_text(
+                os.path.join(cfg.trial_dir, "cmd.txt"),
+                ["python " + " ".join(sys.argv), str(args)],
+            )
+        )()
+```
+
+Trainer initialization:
+
+```
+    trainer = Trainer(
+        callbacks=callbacks,
+        logger=loggers,
+        inference_mode=False,
+        accelerator="gpu",
+        devices=devices,
+        **cfg.trainer,
+    )
+```
+
+Training or other modes:
+
+```
+    def set_system_status(system: BaseSystem, ckpt_path: Optional[str]):
+        if ckpt_path is None:
+            return
+        ckpt = torch.load(ckpt_path, map_location="cpu")
+        system.set_resume_status(ckpt["epoch"], ckpt["global_step"])
+
+    if args.train:
+        trainer.fit(system, datamodule=dm, ckpt_path=cfg.resume)
+        trainer.test(system, datamodule=dm)
+        if args.gradio:
+            # also export assets if in gradio mode
+            trainer.predict(system, datamodule=dm)
+    elif args.validate:
+        # manually set epoch and global_step as they cannot be automatically resumed
+        set_system_status(system, cfg.resume)
+        trainer.validate(system, datamodule=dm, ckpt_path=cfg.resume)
+    elif args.test:
+        # manually set epoch and global_step as they cannot be automatically resumed
+        set_system_status(system, cfg.resume)
+        trainer.test(system, datamodule=dm, ckpt_path=cfg.resume)
+    elif args.export:
+        set_system_status(system, cfg.resume)
+        trainer.predict(system, datamodule=dm, ckpt_path=cfg.resume)
+```
+
+
 ## Trimesh
+
